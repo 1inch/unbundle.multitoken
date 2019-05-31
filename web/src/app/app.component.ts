@@ -2,7 +2,10 @@ import {Component, OnInit} from '@angular/core';
 import {EthersService} from './ethers.service';
 import {ethers} from 'ethers';
 
-const MULTI_TOKEN_NETWORK_ADDRESS = '0x0288C13F98d85C817191710BE24E96ec75bD9914';
+const MULTI_TOKEN_NETWORK_ADDRESSES = [
+    '0x0288C13F98d85C817191710BE24E96ec75bD9914',
+    '0x3478C2E4Ed6f64db0Be9c483B87F70Ff6ab0D65A'
+];
 const MultiTokenNetworkABI = [{
     'constant': true,
     'inputs': [{'name': 'wallet', 'type': 'address'}],
@@ -704,16 +707,22 @@ export class AppComponent implements OnInit {
 
     async ngOnInit() {
 
-        const multiTokenNetworkContract = new ethers.Contract(
-            MULTI_TOKEN_NETWORK_ADDRESS,
-            MultiTokenNetworkABI,
-            this.ethersService.provider.getSigner()
+        const multiTokenNetworkContracts = MULTI_TOKEN_NETWORK_ADDRESSES.map(
+            addr => new ethers.Contract(
+                addr,
+                MultiTokenNetworkABI,
+                this.ethersService.provider.getSigner()
+            )
         );
 
-        this.tokens = await multiTokenNetworkContract.allMultitokens();
+        const promises = multiTokenNetworkContracts.map(c => c.allMultitokens());
+        this.tokens = (await Promise.all(promises)).flatMap(tkns => tkns).filter(
+            (item, index, inputArray) => inputArray.indexOf(item) == index
+        );
 
         const walletAddress = await this.ethersService.provider.getSigner().getAddress();
 
+        const requests = [];
         for (let token of this.tokens) {
 
             const multitokenContract = new ethers.Contract(
@@ -722,7 +731,14 @@ export class AppComponent implements OnInit {
                 this.ethersService.provider.getSigner()
             );
 
-            this.tokenBalances[token] = ethers.utils.formatEther(await multitokenContract.balanceOf(walletAddress));
+            requests.push(multitokenContract.balanceOf(walletAddress));
+        }
+
+        const balances = await Promise.all(requests);
+
+        let index = 0;
+        for (let token of this.tokens) {
+            this.tokenBalances[token] = ethers.utils.formatEther(balances[index++]);
         }
     }
 
