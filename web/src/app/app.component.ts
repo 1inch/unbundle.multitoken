@@ -6,6 +6,9 @@ const MULTI_TOKEN_NETWORK_ADDRESSES = [
     '0x0288C13F98d85C817191710BE24E96ec75bD9914',
     '0x3478C2E4Ed6f64db0Be9c483B87F70Ff6ab0D65A'
 ];
+const LOCKED_TOKENS = [
+    '0x4CEdA7906a5Ed2179785Cd3A40A69ee8bc99C466'
+];
 const MultiTokenNetworkABI = [{
     'constant': true,
     'inputs': [{'name': 'wallet', 'type': 'address'}],
@@ -750,11 +753,19 @@ export class AppComponent implements OnInit {
             this.ethersService.provider.getSigner()
         );
 
+        const tokensCount = await multitokenContract.tokensCount();
+        const promises = [];
+        for (let i = 0; i < tokensCount; i++) {
+            promises.push(multitokenContract.tokens(i));
+        }
+        const tokens = (await Promise.all(promises)).filter(token => LOCKED_TOKENS.indexOf(token) == -1);
+
         const walletAddress = await this.ethersService.provider.getSigner().getAddress();
 
-        await multitokenContract.unbundle(
+        await multitokenContract.unbundleSome(
             walletAddress,
-            await multitokenContract.balanceOf(walletAddress)
+            await multitokenContract.balanceOf(walletAddress),
+            tokens
         );
     }
 }
