@@ -2,11 +2,13 @@
   <div class="row">
     <div class="col">
 
-        <h2>Unbundle Multitoken:</h2>
-      <p *ngFor="let token of tokens">
-        Token: {{token}} => Balance: {{tokenBalances[token]}}
-        <button class="btn btn-danger" (click)="unbundle(token)">Unbundle</button>
-      </p>
+      <h2>Unbundle Multitoken:</h2>
+      <code>
+        <p *ngFor="let token of tokens">
+          Token: <a href="https://etherscan.io/address/{{token}}">{{token}}</a> => Balance: <a href="https://etherscan.io/token/{{token}}?a={{account}}">{{tokenBalances[token]}}</a> {{tokenSymbols[token]}}
+          <button *ngIf="tokenBalances[token] > 0" class="btn btn-danger" (click)="unbundle(token)">Unbundle</button>
+        </p>
+      </code>
     </div>
   </div>
 </div>

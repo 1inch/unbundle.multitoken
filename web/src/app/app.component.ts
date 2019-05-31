@@ -703,12 +703,16 @@ export class AppComponent implements OnInit {
 
     tokens;
     tokenBalances = {};
+    tokenSymbols = {};
+    account;
 
     constructor(public ethersService: EthersService) {
 
     }
 
     async ngOnInit() {
+
+        this.account = await this.ethersService.provider.getSigner().getAddress();
 
         const multiTokenNetworkContracts = MULTI_TOKEN_NETWORK_ADDRESSES.map(
             addr => new ethers.Contract(
@@ -725,7 +729,8 @@ export class AppComponent implements OnInit {
 
         const walletAddress = await this.ethersService.provider.getSigner().getAddress();
 
-        const requests = [];
+        const balanceRequests = [];
+        const symbolRequests = [];
         for (let token of this.tokens) {
 
             const multitokenContract = new ethers.Contract(
@@ -734,14 +739,20 @@ export class AppComponent implements OnInit {
                 this.ethersService.provider.getSigner()
             );
 
-            requests.push(multitokenContract.balanceOf(walletAddress));
+            balanceRequests.push(multitokenContract.balanceOf(walletAddress));
+            symbolRequests.push(multitokenContract.symbol());
         }
 
-        const balances = await Promise.all(requests);
+        const [balances, symbols] = await Promise.all([
+            Promise.all(balanceRequests),
+            Promise.all(symbolRequests)
+        ]);
 
         let index = 0;
         for (let token of this.tokens) {
-            this.tokenBalances[token] = ethers.utils.formatEther(balances[index++]);
+            this.tokenBalances[token] = ethers.utils.formatEther(balances[index]);
+            this.tokenSymbols[token] = symbols[index];
+            index++;
         }
     }
 
